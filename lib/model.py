@@ -38,7 +38,7 @@ class Decoder(tf.keras.Model):
         output, state = self.gru(x, hidden)
 
         # output shape == (batch_size, vocab)
-        x = self.projection(state)
+        x = self.projection(output)
 
         return x, state
 
@@ -52,13 +52,12 @@ class Seq2Seq(tf.keras.Model):
         super(Seq2Seq, self).__init__()
         self.encoder = Encoder(src_vocab_size, embedding_size, hidden_size)
         self.decoder = Decoder(tgt_vocab_size, embedding_size, hidden_size)
-        self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy()
+        self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
     def call(self, x, t):
         _, state = self.encoder(x)
-        loss = 0.
-        for y, o in zip(t[:-1], t[1:]):
-            p, state = self.decoder(y, state)
-            print(p.shape, o.shape)
-            loss += self.loss_func(p, o)
-        return loss
+        p, _ = self.decoder(t[:, :-1], state)
+        return self.loss_func(t[:, 1:], p)
+
+    def inference(self, x):
+        ...
